@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mark Attendance - Face Recognition System</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1a1b2e;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .back-button {
+            background-color: #2d2e3e;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        .camera-container {
+            background-color: #2d2e3e;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px auto;
+            max-width: 800px;
+        }
+        #video {
+            width: 100%;
+            max-width: 640px;
+            border-radius: 10px;
+            margin: 0 auto;
+            display: block;
+        }
+        .button {
+            background-color: #ffd700;
+            color: black;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            margin: 15px 5px;
+        }
+        .button:hover {
+            background-color: #ffed4a;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+        .success-message {
+            background-color: #2ecc71;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        .attendance-log {
+            background-color: #2d2e3e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            text-align: left;
+        }
+        .log-entry {
+            padding: 10px;
+            border-bottom: 1px solid #3d3e4e;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-button">← Back to Dashboard</a>
+        <h1>Mark Attendance</h1>
+
+        <div class="camera-container">
+            <video id="video" width="640" height="480" autoplay playsinline></video>
+            <div>
+                <button id="startCamera" class="button">Start Camera</button>
+                <button id="capture" class="button" style="display: none;">Mark Attendance</button>
+            </div>
+            <div id="result"></div>
+            <div id="successMessage" class="success-message"></div>
+        </div>
+
+        <div class="attendance-log">
+            <h3>Today's Attendance Log</h3>
+            <div id="attendanceLog"></div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const startButton = document.getElementById('startCamera');
+        const captureButton = document.getElementById('capture');
+        const resultDiv = document.getElementById('result');
+        const successMessage = document.getElementById('successMessage');
+        const attendanceLog = document.getElementById('attendanceLog');
+        let stream = null;
+
+        startButton.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    } 
+                });
+                video.srcObject = stream;
+                startButton.style.display = 'none';
+                captureButton.style.display = 'inline-block';
+                resultDiv.textContent = 'Camera started. Ready to take attendance.';
+            } catch (err) {
+                console.error('Camera error:', err);
+                resultDiv.textContent = 'Error accessing camera: ' + err.message;
+            }
+        });
+
+        captureButton.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('image', blob, 'capture.jpg');
+
+                fetch('/mark_attendance/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Show success message
+                        successMessage.innerHTML = `${data.student} checked in successfully!`;
+                        successMessage.style.display = 'block';
+
+                        // Add to attendance log
+                        const now = new Date();
+                        const timeString = now.toLocaleTimeString();
+                        const logEntry = document.createElement('div');
+                        logEntry.className = 'log-entry';
+                        logEntry.innerHTML = `
+                            <span>${data.student}</span>
+                            <span>${timeString}</span>
+                        `;
+                        attendanceLog.insertBefore(logEntry, attendanceLog.firstChild);
+
+                        // Hide success message after 3 seconds
+                        setTimeout(() => {
+                            successMessage.style.display = 'none';
+                        }, 3000);
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div style="color: #e74c3c; padding: 10px;">
+                                ${data.message}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultDiv.innerHTML = 'Error marking attendance. Please try again.';
+                });
+            }, 'image/jpeg', 0.95);
+        });
+
+        // Cleanup when leaving page
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>

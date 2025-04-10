@@ -95,117 +95,96 @@
                 <label for="email">Email Address:</label>
                 <input type="email" id="email" name="email" required>
             </div>
-            <!-- Add this to your style section -->
-            <style>
-                .video-wrapper {
-                    position: relative;
-                    width: 640px;
-                    margin: 0 auto;
-                }
-                .face-guide {
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 300px;
-                    height: 350px;
-                    border: 3px solid #2ecc71;
-                    border-radius: 15px;
-                    box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.3);
-                }
-                .guide-text {
-                    position: absolute;
-                    bottom: -40px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    color: #2ecc71;
-                    white-space: nowrap;
-                }
-            </style>
-            
-            <!-- Replace the video-container div with this -->
             <div class="video-container">
                 <label>Face Photo:</label>
-                <div class="video-wrapper">
-                    <video id="video" autoplay></video>
-                    <div class="face-guide">
-                        <span class="guide-text">Align your face within the green box</span>
-                    </div>
-                </div>
+                <video id="video" autoplay></video>
                 <button type="button" id="captureBtn" class="button">Capture Photo</button>
                 <canvas id="canvas" style="display:none;"></canvas>
             </div>
-            <!-- Update the JavaScript capture code -->
-            <script>
-                // Start camera
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(stream => {
-                        video.srcObject = stream;
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        resultDiv.innerHTML = 'Error accessing camera';
-                        resultDiv.className = 'error';
-                    });
-            
-                // Capture photo
-                captureBtn.addEventListener('click', () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(video, 0, 0);
-                    
-                    // Convert to RGB format
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    canvas.toBlob(blob => {
-                        photoBlob = blob;
-                        resultDiv.innerHTML = 'Photo captured successfully!';
-                        resultDiv.className = 'success';
-                    }, 'image/jpeg', 1.0);  // Set quality to 1.0 for best results
-                });
-            
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    
-                    if (!photoBlob) {
-                        resultDiv.innerHTML = 'Please capture a photo first!';
-                        resultDiv.className = 'error';
-                        return;
-                    }
-            
-                    const formData = new FormData();
-                    formData.append('name', document.getElementById('name').value);
-                    formData.append('student_id', document.getElementById('student_id').value);
-                    formData.append('email', document.getElementById('email').value);
-                    formData.append('photo', photoBlob, 'photo.jpg');
-            
-                    try {
-                        const response = await fetch('/register/', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.status === 'success') {
-                            resultDiv.innerHTML = 'Registration successful!';
-                            resultDiv.className = 'success';
-                            form.reset();
-                            photoBlob = null;
-                        } else {
-                            resultDiv.innerHTML = data.message || 'Registration failed';
-                            resultDiv.className = 'error';
-                        }
-                    } catch (error) {
-                        resultDiv.innerHTML = 'An error occurred during registration';
-                        resultDiv.className = 'error';
-                        console.error(error);
-                    }
-                });
-            </script>
             <button type="submit" id="submitBtn" class="button" style="background-color: #27ae60;">Submit Registration</button>
         </form>
         <div id="result"></div>
     </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('captureBtn');
+        const form = document.getElementById('registrationForm');
+        const resultDiv = document.getElementById('result');
+        let photoBlob = null;
+
+        // Start camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error(err);
+                resultDiv.innerHTML = 'Error accessing camera';
+                resultDiv.className = 'error';
+            });
+
+        // Capture photo
+        captureBtn.addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            canvas.toBlob(blob => {
+                photoBlob = blob;
+                resultDiv.innerHTML = 'Photo captured successfully!';
+                resultDiv.className = 'success';
+            }, 'image/jpeg');
+        });
+
+        // Form submission
+        // Replace the form submission code with this:
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!photoBlob) {
+                resultDiv.innerHTML = 'Please capture a photo first!';
+                resultDiv.className = 'error';
+                return;
+            }
+        
+            // Convert blob to base64
+            const reader = new FileReader();
+            reader.readAsDataURL(photoBlob);
+            reader.onloadend = async () => {
+                const base64data = reader.result;
+                
+                const formData = new FormData();
+                formData.append('name', document.getElementById('name').value);
+                formData.append('student_id', document.getElementById('student_id').value);
+                formData.append('email', document.getElementById('email').value);
+                formData.append('photo', base64data);
+        
+                try {
+                    const response = await fetch('/register/', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        resultDiv.innerHTML = 'Registration successful!';
+                        resultDiv.className = 'success';
+                        form.reset();
+                        photoBlob = null;
+                    } else {
+                        resultDiv.innerHTML = data.message || 'Registration failed';
+                        resultDiv.className = 'error';
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = 'An error occurred during registration';
+                    resultDiv.className = 'error';
+                    console.error(error);
+                }
+            };
+        });
+    </script>
 </body>
 </html>

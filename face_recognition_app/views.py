@@ -99,77 +99,72 @@ def camera_config(request):
 def mark_attendance(request):
     if request.method == 'POST':
         try:
-            # Get the image from the POST request
-            image = request.FILES.get('image')
-            img_array = np.frombuffer(image.read(), np.uint8)
-            frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+            if 'image' not in request.FILES:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No image file received'
+                })
+
+            image = request.FILES['image']
             
+            # Read image file
+            image_bytes = image.read()
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            
+            if frame is None:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid image format'
+                })
+
             # Convert BGR to RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
             # Find faces in the image
             face_locations = face_recognition.face_locations(rgb_frame)
+            
+            if not face_locations:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No face detected in the image'
+                })
+
             face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
             
-            for face_encoding in face_encodings:
+            for face_encoding, face_location in zip(face_encodings, face_locations):
                 # Compare with known faces
                 students = Student.objects.all()
                 for student in students:
                     stored_encoding = np.frombuffer(student.face_encoding)
-                    match = face_recognition.compare_faces([stored_encoding], face_encoding)[0]
+                    match = face_recognition.compare_faces([stored_encoding], face_encoding, tolerance=0.6)[0]
                     
                     if match:
                         # Mark attendance
-                        Attendance.objects.get_or_create(
+                        attendance, created = Attendance.objects.get_or_create(
                             student=student,
                             date=date.today()
                         )
-                        return JsonResponse({'status': 'success', 'student': student.name})
-        
-            return JsonResponse({'status': 'error', 'message': 'No matching face found'})
+                        
+                        return JsonResponse({
+                            'status': 'success',
+                            'student': student.name,
+                            'face_location': face_location
+                        })
+            
+            return JsonResponse({
+                'status': 'error',
+                'message': 'No matching student found'
+            })
+            
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)})
+            print(f"Error processing attendance: {str(e)}")  # For debugging
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Error processing attendance'
+            })
     
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
-
-@csrf_exempt
-def delete_student(request, student_id):
-    if request.method == 'POST':
-        try:
-            student = Student.objects.get(id=student_id)
-            student.delete()
-            return JsonResponse({'status': 'success'})
-        except Student.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Student not found'})
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
-
-def edit_student(request, student_id):
-    student = get_object_or_404(Student, id=student_id)
-    if request.method == 'POST':
-        try:
-            student.name = request.POST.get('name', student.name)
-            student.student_id = request.POST.get('student_id', student.student_id)
-            
-            if 'photo' in request.FILES:
-                photo = request.FILES['photo']
-                image = face_recognition.load_image_file(photo)
-                face_encodings = face_recognition.face_encodings(image)
-                
-                if face_encodings:
-                    student.photo = photo
-                    student.face_encoding = face_encodings[0].tobytes()
-                    student.save()
-                    return JsonResponse({'status': 'success'})
-                else:
-                    return JsonResponse({
-                        'status': 'error',
-                        'message': 'No face detected in the photo'
-                    })
-            
-            student.save()
-            return JsonResponse({'status': 'success'})
-            
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)})
-            
-    return render(request, 'face_recognition_app/edit_student.html', {'student': student})
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })

@@ -1,150 +1,176 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Smart Attendance Management System</title>
+    <title>AI-Powered Face Recognition Attendance</title>
     <style>
         body {
             margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f6fa;
-            color: #2c3e50;
+            font-family: Arial, sans-serif;
+            background-color: #1a1b2e;
+            color: white;
         }
         .sidebar {
-            width: 280px;
-            background-color: #fff;
+            width: 250px;
+            background-color: #0d0e1b;
             height: 100vh;
             position: fixed;
-            padding: 25px;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-        }
-        .sidebar h2 {
-            color: #2c3e50;
-            font-size: 24px;
-            margin-bottom: 30px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #eee;
+            padding: 20px;
         }
         .main-content {
-            margin-left: 280px;
-            padding: 40px;
-            background-color: #f5f6fa;
+            margin-left: 250px;
+            padding: 20px;
+            text-align: center;
         }
         .menu-item {
-            padding: 15px 20px;
-            margin: 8px 0;
-            color: #2c3e50;
+            padding: 10px;
+            margin: 5px 0;
+            color: white;
             text-decoration: none;
             display: block;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            font-weight: 500;
+            border-radius: 5px;
         }
         .menu-item:hover {
-            background-color: #f8f9fa;
-            transform: translateX(5px);
+            background-color: #2d2e3e;
         }
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            margin-top: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
         }
         .dashboard-item {
-            background-color: #fff;
-            padding: 25px;
-            border-radius: 12px;
+            background-color: #2d2e3e;
+            padding: 20px;
+            border-radius: 10px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
         }
         .dashboard-item:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
         }
         .icon {
-            font-size: 32px;
-            margin-bottom: 15px;
-            color: #3498db;
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #ffd700;
         }
         #video {
             display: none;
-            margin: 30px auto;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            border-radius: 10px;
         }
         .button {
-            background-color: #3498db;
-            color: white;
-            padding: 12px 25px;
+            background-color: #ffd700;
+            color: black;
+            padding: 10px 20px;
             border: none;
-            border-radius: 8px;
+            border-radius: 5px;
             cursor: pointer;
-            margin-top: 15px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        .button:hover {
-            background-color: #2980b9;
-        }
-        .header-section {
-            margin-bottom: 40px;
-        }
-        .header-section h1 {
-            font-size: 32px;
-            color: #2c3e50;
-            margin-bottom: 15px;
-        }
-        .header-section p {
-            color: #7f8c8d;
-            font-size: 18px;
-            line-height: 1.6;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <h2>Smart Attendance</h2>
-        <a href="/register" class="menu-item">👤 New Enrollment</a>
-        <a href="/students" class="menu-item">📋 Student Directory</a>
-        <a href="/attendance" class="menu-item">✓ Take Attendance</a>
-        <a href="/details" class="menu-item">📊 Attendance Analytics</a>
+        <h2>AI Dashboard</h2>
+        <a href="/register" class="menu-item">📝 Student Registration</a>
+        <a href="/students" class="menu-item">👥 View/Authorize Students</a>
+        <a href="/attendance" class="menu-item">📊 Mark Attendance</a>
+        <a href="/details" class="menu-item">📋 Attendance Details</a>
+        <a href="/camera" class="menu-item">⚙️ Camera Configuration</a>
     </div>
 
     <div class="main-content">
-        <div class="header-section">
-            <h1>Smart Attendance Management System</h1>
-            <p>Streamline attendance tracking with advanced facial recognition technology</p>
-        </div>
+        <h1>AI-Powered Face Recognition Attendance</h1>
+        <p>Register students, manage attendance, and integrate AI for seamless recognition.</p>
 
         <div class="dashboard-grid">
             <div class="dashboard-item" onclick="location.href='/register'">
                 <div class="icon">👤</div>
-                <h3>New Enrollment</h3>
-                <p>Register new students in the system</p>
+                <h3>Register Students</h3>
             </div>
             <div class="dashboard-item" onclick="location.href='/students'">
-                <div class="icon">📋</div>
-                <h3>Student Directory</h3>
-                <p>View and manage enrolled students</p>
+                <div class="icon">✅</div>
+                <h3>Authorize Students</h3>
             </div>
-            <div class="dashboard-item" onclick="toggleCamera()">
-                <div class="icon">✓</div>
-                <h3>Take Attendance</h3>
-                <p>Mark attendance using facial recognition</p>
+            <!-- In the dashboard grid, update the Mark Attendance item to -->
+            <div class="dashboard-item" onclick="location.href='/attendance'">
+                <div class="icon">📸</div>
+                <h3>Mark Attendance</h3>
             </div>
+            
+            <!-- Remove the video, capture button, and related JavaScript code -->
             <div class="dashboard-item" onclick="location.href='/details'">
                 <div class="icon">📊</div>
-                <h3>Attendance Analytics</h3>
-                <p>View detailed attendance reports</p>
+                <h3>View Attendance</h3>
+            </div>
+            <div class="dashboard-item" onclick="location.href='/camera'">
+                <div class="icon">⚙️</div>
+                <h3>Configure Camera</h3>
             </div>
         </div>
 
         <video id="video" width="640" height="480" autoplay></video>
         <br>
-        <button id="capture" class="button" style="display: none;">Capture Attendance</button>
+        <button id="capture" class="button" style="display: none;">Mark Attendance</button>
         <div id="result"></div>
     </div>
 
-    <!-- JavaScript remains the same -->
+    <script>
+        const video = document.getElementById('video');
+        const captureButton = document.getElementById('capture');
+        const resultDiv = document.getElementById('result');
+
+        function toggleCamera() {
+            if (video.style.display === 'none') {
+                video.style.display = 'block';
+                captureButton.style.display = 'inline-block';
+                startCamera();
+            } else {
+                video.style.display = 'none';
+                captureButton.style.display = 'none';
+                stopCamera();
+            }
+        }
+
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(err => console.error(err));
+        }
+
+        function stopCamera() {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        captureButton.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('image', blob);
+
+                fetch('/mark_attendance/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        resultDiv.innerHTML = `Attendance marked for ${data.student}`;
+                    } else {
+                        resultDiv.innerHTML = data.message;
+                    }
+                })
+                .catch(error => console.error(error));
+            });
+        });
+    </script>
 </body>
 </html>
