@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Enrollment - Smart Attendance System</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f6fa;
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .video-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        #video {
+            width: 100%;
+            max-width: 640px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            margin: 10px 0;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3498db;
+            text-decoration: none;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Dashboard</a>
+        <h2>New Student Enrollment</h2>
+        <form id="registrationForm">
+            <div class="form-group">
+                <label for="name">Full Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="student_id">Student ID:</label>
+                <input type="text" id="student_id" name="student_id" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email Address:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="video-container">
+                <label>Face Photo:</label>
+                <video id="video" autoplay></video>
+                <button type="button" id="captureBtn" class="button">Capture Photo</button>
+                <canvas id="canvas" style="display:none;"></canvas>
+            </div>
+            <button type="submit" id="submitBtn" class="button" style="background-color: #27ae60;">Submit Registration</button>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('captureBtn');
+        const form = document.getElementById('registrationForm');
+        const resultDiv = document.getElementById('result');
+        let photoBlob = null;
+
+        // Start camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error(err);
+                resultDiv.innerHTML = 'Error accessing camera';
+                resultDiv.className = 'error';
+            });
+
+        // Capture photo
+        captureBtn.addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            canvas.toBlob(blob => {
+                photoBlob = blob;
+                resultDiv.innerHTML = 'Photo captured successfully!';
+                resultDiv.className = 'success';
+            }, 'image/jpeg');
+        });
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!photoBlob) {
+                resultDiv.innerHTML = 'Please capture a photo first!';
+                resultDiv.className = 'error';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('name', document.getElementById('name').value);
+            formData.append('student_id', document.getElementById('student_id').value);
+            formData.append('email', document.getElementById('email').value);
+            formData.append('photo', photoBlob, 'photo.jpg');
+
+            try {
+                const response = await fetch('/register/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    resultDiv.innerHTML = 'Registration successful!';
+                    resultDiv.className = 'success';
+                    form.reset();
+                    photoBlob = null;
+                } else {
+                    resultDiv.innerHTML = data.message || 'Registration failed';
+                    resultDiv.className = 'error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = 'An error occurred during registration';
+                resultDiv.className = 'error';
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>
