@@ -37,41 +37,64 @@ def register(request):
                     'message': 'Student ID already exists'
                 })
 
-            # Convert base64 image to numpy array
-            photo_data = photo_data.split(',')[1]  # Remove data:image/jpeg;base64,
-            photo_bytes = np.frombuffer(base64.b64decode(photo_data), np.uint8)
-            image = cv2.imdecode(photo_bytes, cv2.IMREAD_COLOR)
-            
-            # Convert BGR to RGB
-            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            
-            # Generate face encoding
-            face_encodings = face_recognition.face_encodings(rgb_image)
-            
-            if not face_encodings:
+            try:
+                # Convert base64 image to numpy array
+                photo_data = photo_data.split(',')[1]  # Remove data:image/jpeg;base64,
+                photo_bytes = np.frombuffer(base64.b64decode(photo_data), np.uint8)
+                image = cv2.imdecode(photo_bytes, cv2.IMREAD_COLOR)
+                
+                if image is None:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Invalid image format'
+                    })
+                
+                # Ensure image is in correct format
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                
+                # Generate face encoding
+                face_locations = face_recognition.face_locations(image)
+                if not face_locations:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'No face detected in the photo. Please try again.'
+                    })
+                
+                face_encodings = face_recognition.face_encodings(image, face_locations)
+                
+                if not face_encodings:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Could not process face in the photo. Please try again.'
+                    })
+
+                # Convert back to BGR for saving
+                save_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                
+                # Save image to temporary file
+                temp_file = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+                cv2.imwrite(temp_file.name, save_image)
+                
+                # Create new student with the saved image
+                with open(temp_file.name, 'rb') as f:
+                    student = Student.objects.create(
+                        student_id=student_id,
+                        name=name,
+                        photo=File(f, name=f'{student_id}.jpg')
+                    )
+                    student.face_encoding = face_encodings[0].tobytes()
+                    student.save()
+
+                # Clean up temporary file
+                os.unlink(temp_file.name)
+                
+                return JsonResponse({'status': 'success'})
+                
+            except cv2.error as e:
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'No face detected in the photo. Please try again.'
+                    'message': 'Error processing image. Please try a different photo.'
                 })
-
-            # Save image to temporary file
-            temp_file = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
-            cv2.imwrite(temp_file.name, image)
-            
-            # Create new student with the saved image
-            with open(temp_file.name, 'rb') as f:
-                student = Student.objects.create(
-                    student_id=student_id,
-                    name=name,
-                    photo=File(f, name=f'{student_id}.jpg')
-                )
-                student.face_encoding = face_encodings[0].tobytes()
-                student.save()
-
-            # Clean up temporary file
-            os.unlink(temp_file.name)
-            
-            return JsonResponse({'status': 'success'})
                 
         except Exception as e:
             return JsonResponse({
