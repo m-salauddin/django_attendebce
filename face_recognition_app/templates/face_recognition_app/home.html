@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Recognition Attendance System</title>
+    <style>
+        .container {
+            text-align: center;
+            margin-top: 50px;
+        }
+        #video {
+            border: 1px solid black;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Face Recognition Attendance System</h1>
+        <video id="video" width="640" height="480" autoplay></video>
+        <br>
+        <button id="capture">Mark Attendance</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const captureButton = document.getElementById('capture');
+        const resultDiv = document.getElementById('result');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => console.error(err));
+
+        captureButton.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('image', blob);
+
+                fetch('/mark_attendance/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        resultDiv.innerHTML = `Attendance marked for ${data.student}`;
+                    } else {
+                        resultDiv.innerHTML = data.message;
+                    }
+                })
+                .catch(error => console.error(error));
+            });
+        });
+    </script>
+</body>
+</html>
