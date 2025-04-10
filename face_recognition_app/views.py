@@ -131,3 +131,45 @@ def mark_attendance(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@csrf_exempt
+def delete_student(request, student_id):
+    if request.method == 'POST':
+        try:
+            student = Student.objects.get(id=student_id)
+            student.delete()
+            return JsonResponse({'status': 'success'})
+        except Student.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Student not found'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+def edit_student(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+    if request.method == 'POST':
+        try:
+            student.name = request.POST.get('name', student.name)
+            student.student_id = request.POST.get('student_id', student.student_id)
+            
+            if 'photo' in request.FILES:
+                photo = request.FILES['photo']
+                image = face_recognition.load_image_file(photo)
+                face_encodings = face_recognition.face_encodings(image)
+                
+                if face_encodings:
+                    student.photo = photo
+                    student.face_encoding = face_encodings[0].tobytes()
+                    student.save()
+                    return JsonResponse({'status': 'success'})
+                else:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'No face detected in the photo'
+                    })
+            
+            student.save()
+            return JsonResponse({'status': 'success'})
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+            
+    return render(request, 'face_recognition_app/edit_student.html', {'student': student})

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Students List - Face Recognition Attendance</title>
+    <title>Student Directory - Smart Attendance System</title>
     <style>
         body {
             margin: 0;
@@ -16,15 +16,15 @@
         }
         .student-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
-            margin-top: 30px;
+            margin-top: 20px;
         }
         .student-card {
-            background-color: #2d2e3e;
+            background: white;
             border-radius: 10px;
-            padding: 15px;
-            text-align: center;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .student-photo {
             width: 150px;
@@ -33,33 +33,43 @@
             object-fit: cover;
             margin-bottom: 15px;
         }
-        .student-info {
-            margin-bottom: 10px;
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
         }
-        .back-button {
-            background-color: #ffd700;
-            color: black;
-            padding: 10px 20px;
-            border: none;
+        .edit-btn {
+            background: #3498db;
+            color: white;
+            padding: 8px 15px;
             border-radius: 5px;
-            text-decoration: none;
-            display: inline-block;
-            margin-bottom: 20px;
+            cursor: pointer;
+            border: none;
+        }
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="/" class="back-button">← Back to Dashboard</a>
-        <h1>Registered Students</h1>
+        <a href="/" class="back-link">← Back to Dashboard</a>
+        <h2>Student Directory</h2>
         
         <div class="student-grid">
             {% for student in students %}
-            <div class="student-card">
+            <div class="student-card" id="student-{{ student.id }}">
                 <img src="{{ student.photo.url }}" alt="{{ student.name }}" class="student-photo">
-                <div class="student-info">
-                    <h3>{{ student.name }}</h3>
-                    <p>ID: {{ student.student_id }}</p>
+                <h3>{{ student.name }}</h3>
+                <p>ID: {{ student.student_id }}</p>
+                <div class="action-buttons">
+                    <button class="edit-btn" onclick="editStudent('{{ student.id }}')">Edit</button>
+                    <button class="delete-btn" onclick="deleteStudent('{{ student.id }}')">Delete</button>
                 </div>
             </div>
             {% empty %}
@@ -67,5 +77,30 @@
             {% endfor %}
         </div>
     </div>
+
+    <script>
+        async function deleteStudent(studentId) {
+            if (confirm('Are you sure you want to delete this student?')) {
+                try {
+                    const response = await fetch(`/delete_student/${studentId}/`, {
+                        method: 'POST',
+                    });
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        document.getElementById(`student-${studentId}`).remove();
+                    } else {
+                        alert('Failed to delete student');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to delete student');
+                }
+            }
+        }
+
+        function editStudent(studentId) {
+            window.location.href = `/edit_student/${studentId}/`;
+        }
+    </script>
 </body>
 </html>
