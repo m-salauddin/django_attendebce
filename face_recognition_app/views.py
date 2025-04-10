@@ -7,6 +7,10 @@ import numpy as np
 from .models import Student, Attendance
 from datetime import date
 import json
+import base64
+import tempfile
+import os
+from django.core.files import File
 
 def home(request):
     return render(request, 'face_recognition_app/home.html')
@@ -18,9 +22,9 @@ def register(request):
             name = request.POST.get('name')
             email = request.POST.get('email')
             student_id = request.POST.get('student_id')
-            photo = request.FILES.get('photo')
+            photo_data = request.POST.get('photo')
             
-            if not all([name, email, student_id, photo]):
+            if not all([name, email, student_id, photo_data]):
                 return JsonResponse({
                     'status': 'error',
                     'message': 'All fields are required'
@@ -32,28 +36,42 @@ def register(request):
                     'status': 'error',
                     'message': 'Student ID already exists'
                 })
+
+            # Convert base64 image to numpy array
+            photo_data = photo_data.split(',')[1]  # Remove data:image/jpeg;base64,
+            photo_bytes = np.frombuffer(base64.b64decode(photo_data), np.uint8)
+            image = cv2.imdecode(photo_bytes, cv2.IMREAD_COLOR)
             
-            # Create new student
-            student = Student.objects.create(
-                student_id=student_id,
-                name=name,
-                photo=photo
-            )
+            # Convert BGR to RGB
+            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             
-            # Generate and save face encoding
-            image = face_recognition.load_image_file(photo)
-            face_encodings = face_recognition.face_encodings(image)
+            # Generate face encoding
+            face_encodings = face_recognition.face_encodings(rgb_image)
             
-            if face_encodings:
-                student.face_encoding = face_encodings[0].tobytes()
-                student.save()
-                return JsonResponse({'status': 'success'})
-            else:
-                student.delete()
+            if not face_encodings:
                 return JsonResponse({
                     'status': 'error',
                     'message': 'No face detected in the photo. Please try again.'
                 })
+
+            # Save image to temporary file
+            temp_file = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+            cv2.imwrite(temp_file.name, image)
+            
+            # Create new student with the saved image
+            with open(temp_file.name, 'rb') as f:
+                student = Student.objects.create(
+                    student_id=student_id,
+                    name=name,
+                    photo=File(f, name=f'{student_id}.jpg')
+                )
+                student.face_encoding = face_encodings[0].tobytes()
+                student.save()
+
+            # Clean up temporary file
+            os.unlink(temp_file.name)
+            
+            return JsonResponse({'status': 'success'})
                 
         except Exception as e:
             return JsonResponse({

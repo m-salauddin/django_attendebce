@@ -139,6 +139,7 @@
         });
 
         // Form submission
+        // Replace the form submission code with this:
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -147,35 +148,42 @@
                 resultDiv.className = 'error';
                 return;
             }
-
-            const formData = new FormData();
-            formData.append('name', document.getElementById('name').value);
-            formData.append('student_id', document.getElementById('student_id').value);
-            formData.append('email', document.getElementById('email').value);
-            formData.append('photo', photoBlob, 'photo.jpg');
-
-            try {
-                const response = await fetch('/register/', {
-                    method: 'POST',
-                    body: formData
-                });
+        
+            // Convert blob to base64
+            const reader = new FileReader();
+            reader.readAsDataURL(photoBlob);
+            reader.onloadend = async () => {
+                const base64data = reader.result;
                 
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    resultDiv.innerHTML = 'Registration successful!';
-                    resultDiv.className = 'success';
-                    form.reset();
-                    photoBlob = null;
-                } else {
-                    resultDiv.innerHTML = data.message || 'Registration failed';
+                const formData = new FormData();
+                formData.append('name', document.getElementById('name').value);
+                formData.append('student_id', document.getElementById('student_id').value);
+                formData.append('email', document.getElementById('email').value);
+                formData.append('photo', base64data);
+        
+                try {
+                    const response = await fetch('/register/', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        resultDiv.innerHTML = 'Registration successful!';
+                        resultDiv.className = 'success';
+                        form.reset();
+                        photoBlob = null;
+                    } else {
+                        resultDiv.innerHTML = data.message || 'Registration failed';
+                        resultDiv.className = 'error';
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = 'An error occurred during registration';
                     resultDiv.className = 'error';
+                    console.error(error);
                 }
-            } catch (error) {
-                resultDiv.innerHTML = 'An error occurred during registration';
-                resultDiv.className = 'error';
-                console.error(error);
-            }
+            };
         });
     </script>
 </body>
