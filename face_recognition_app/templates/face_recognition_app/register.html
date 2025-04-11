@@ -3,78 +3,151 @@
 <head>
     <title>Student Enrollment - Smart Attendance System</title>
     <style>
+        :root {
+            --primary-color: #1e3a5f;    /* Deep Ocean Blue */
+            --secondary-color: #2d4a7c;   /* Royal Blue */
+            --accent-color: #64ffda;      /* Mint */
+            --text-light: #e3f2fd;
+            --dark-bg: #0a192f;          /* Navy Dark */
+            --card-bg: #172a45;          /* Card Blue */
+            --border-color: rgba(100, 255, 218, 0.1);
+        }
+
         body {
             margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f6fa;
-            color: #2c3e50;
+            font-family: 'Segoe UI', system-ui, -apple-system;
+            background: linear-gradient(135deg, var(--dark-bg), #162744);
+            background-attachment: fixed;
+            color: var(--text-light);
         }
+
         .container {
             max-width: 800px;
             margin: 50px auto;
             padding: 30px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: rgba(23, 42, 69, 0.8);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
         }
+
         .form-group {
             margin-bottom: 20px;
         }
+
         .form-group label {
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
-            color: #2c3e50;
+            color: var(--text-light);
         }
+
         .form-group input {
             width: 100%;
             padding: 12px;
-            border: 1px solid #ddd;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             font-size: 16px;
+            color: var(--text-light);
+            transition: all 0.3s ease;
         }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.1);
+        }
+
         .video-container {
             margin: 20px 0;
             text-align: center;
         }
+
         #video {
             width: 100%;
             max-width: 640px;
-            border-radius: 8px;
+            border-radius: 12px;
             margin-bottom: 15px;
+            border: 2px solid var(--border-color);
         }
+
         .button {
-            background-color: #3498db;
-            color: white;
+            background-color: var(--accent-color);
+            color: var(--dark-bg);
             padding: 12px 25px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
-            font-weight: 500;
+            font-weight: 600;
             margin: 10px 0;
+            transition: all 0.3s ease;
         }
+
         .button:hover {
-            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(100, 255, 218, 0.2);
         }
+
         .back-link {
             display: inline-block;
             margin-bottom: 20px;
-            color: #3498db;
+            color: var(--accent-color);
             text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
         }
+
+        .back-link:hover {
+            color: var(--text-light);
+        }
+
         #result {
             margin-top: 20px;
             padding: 15px;
             border-radius: 8px;
         }
+
         .success {
-            background-color: #d4edda;
-            color: #155724;
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74, 222, 128, 0.2);
         }
+
         .error {
-            background-color: #f8d7da;
-            color: #721c24;
+            background: rgba(255, 86, 86, 0.1);
+            color: #ff5656;
+            border: 1px solid rgba(255, 86, 86, 0.2);
+        }
+
+        #face-guide {
+            border-color: var(--accent-color) !important;
+            box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        #submitBtn {
+            background-color: #4ade80;
+        }
+
+        #submitBtn:hover {
+            background-color: #22c55e;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+
+            .video-wrapper {
+                width: 100% !important;
+            }
+
+            #video {
+                height: auto;
+            }
         }
     </style>
 </head>
@@ -97,12 +170,38 @@
             </div>
             <div class="video-container">
                 <label>Face Photo:</label>
-                <video id="video" width="640" height="480" autoplay playsinline></video>
+                <div class="video-wrapper" style="position: relative; width: 640px; margin: 0 auto;">
+                    <video id="video" width="640" height="480" autoplay playsinline></video>
+                    <div id="face-guide" style="
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 300px;
+                        height: 350px;
+                        border: 3px solid #3498db;
+                        border-radius: 10px;
+                        box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.3);
+                        pointer-events: none;
+                    "></div>
+                    <div style="
+                        position: absolute;
+                        bottom: 10px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        color: white;
+                        background: rgba(0, 0, 0, 0.7);
+                        padding: 8px 15px;
+                        border-radius: 20px;
+                        font-size: 14px;
+                    ">Position your face within the blue rectangle</div>
+                </div>
                 <canvas id="canvas" style="display:none;"></canvas>
                 <img id="preview" style="display:none; max-width: 320px; margin-top: 10px;">
                 <input type="hidden" id="photoData" name="photo">
                 <button type="button" id="captureBtn" class="button">Capture Photo</button>
             </div>
+
             <script>
                 const video = document.getElementById('video');
                 const canvas = document.getElementById('canvas');
@@ -132,11 +231,26 @@
                 startCamera();
 
                 // Capture photo
+                // Update capture function to include guide box
                 captureBtn.addEventListener('click', () => {
                     const context = canvas.getContext('2d');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     context.drawImage(video, 0, 0);
+                    
+                    // Draw guide box on captured image
+                    const guideBox = document.getElementById('face-guide');
+                    const rect = guideBox.getBoundingClientRect();
+                    const videoRect = video.getBoundingClientRect();
+                    
+                    // Calculate relative position of guide box
+                    const scaleX = video.videoWidth / videoRect.width;
+                    const scaleY = video.videoHeight / videoRect.height;
+                    
+                    const boxX = (rect.left - videoRect.left) * scaleX;
+                    const boxY = (rect.top - videoRect.top) * scaleY;
+                    const boxWidth = rect.width * scaleX;
+                    const boxHeight = rect.height * scaleY;
                     
                     // Convert to base64
                     const imageData = canvas.toDataURL('image/jpeg', 0.9);

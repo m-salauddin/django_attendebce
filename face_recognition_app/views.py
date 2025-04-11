@@ -159,8 +159,70 @@ def attendance(request):
     return render(request, 'face_recognition_app/attendance.html')
 
 def attendance_details(request):
+    students = Student.objects.all()
     attendance_list = Attendance.objects.all().order_by('-date', '-time')
-    return render(request, 'face_recognition_app/details.html', {'attendance': attendance_list})
+    return render(request, 'face_recognition_app/details.html', {
+        'attendance': attendance_list,
+        'students': students
+    })
+
+@csrf_exempt
+def filter_attendance(request):
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    student_id = request.GET.get('student_id')
+    
+    queryset = Attendance.objects.all()
+    
+    if start_date:
+        queryset = queryset.filter(date__gte=start_date)
+    if end_date:
+        queryset = queryset.filter(date__lte=end_date)
+    if student_id:
+        queryset = queryset.filter(student_id=student_id)
+        
+    attendance_data = [{
+        'student_name': record.student.name,
+        'student_id': record.student.student_id,
+        'date': record.date.strftime('%Y-%m-%d'),
+        'time': record.time.strftime('%H:%M:%S')
+    } for record in queryset]
+    
+    return JsonResponse({'attendance': attendance_data})
+
+def export_attendance(request):
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="attendance.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Student Name', 'Student ID', 'Date', 'Time', 'Status'])
+    
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    student_id = request.GET.get('student_id')
+    
+    queryset = Attendance.objects.all()
+    
+    if start_date:
+        queryset = queryset.filter(date__gte=start_date)
+    if end_date:
+        queryset = queryset.filter(date__lte=end_date)
+    if student_id:
+        queryset = queryset.filter(student_id=student_id)
+    
+    for record in queryset:
+        writer.writerow([
+            record.student.name,
+            record.student.student_id,
+            record.date,
+            record.time.strftime('%H:%M:%S'),
+            'Present'
+        ])
+    
+    return response
 
 def camera_config(request):
     return render(request, 'face_recognition_app/camera.html')
@@ -176,25 +238,35 @@ def mark_attendance(request):
             # Convert BGR to RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            # Find faces in the image
-            face_locations = face_recognition.face_locations(rgb_frame)
-            face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+            # Enhanced face detection parameters
+            face_locations = face_recognition.face_locations(
+                rgb_frame,
+                model="hog",  # Use HOG model for better performance
+                number_of_times_to_upsample=2  # Increase detection sensitivity
+            )
             
-            attendance_marked = False
+            # Enhanced face encoding parameters
+            face_encodings = face_recognition.face_encodings(
+                rgb_frame,
+                face_locations,
+                num_jitters=2,  # Increase accuracy with more samples
+                model="large"  # Use large model for better accuracy
+            )
             
             for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-                # Draw rectangle around face
                 cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
-                # Draw rectangle for name label
-                cv2.rectangle(frame, (left, top - 35), (right, top), (0, 255, 0), cv2.FILLED)
                 
-                # Compare with known faces
                 students = Student.objects.all()
                 for student in students:
                     stored_encoding = np.frombuffer(student.face_encoding)
-                    match = face_recognition.compare_faces([stored_encoding], face_encoding, tolerance=0.6)[0]
+                    # Increased tolerance for better matching
+                    matches = face_recognition.compare_faces(
+                        [stored_encoding],
+                        face_encoding,
+                        tolerance=0.5  # Decreased tolerance for more strict matching
+                    )
                     
-                    if match:
+                    if matches[0]:
                         # Add name label
                         cv2.putText(frame, student.name, (left + 6, top - 6), 
                                   cv2.FONT_HERSHEY_COMPLEX, 0.6, (255, 255, 255), 1)

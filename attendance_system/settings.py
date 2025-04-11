@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'face_recognition_app',
+    'bootstrap5',
 ]
 
 # Add these at the bottom of the file
