@@ -87,101 +87,185 @@
         <h1>Mark Attendance</h1>
 
         <div class="camera-container">
-            <video id="video" width="640" height="480" autoplay playsinline></video>
+            <div class="video-wrapper">
+                <video id="video" width="640" height="480" autoplay playsinline></video>
+                <canvas id="displayCanvas" width="640" height="480"></canvas>
+            </div>
             <div>
                 <button id="startCamera" class="button">Start Camera</button>
-                <button id="capture" class="button" style="display: none;">Mark Attendance</button>
             </div>
             <div id="result"></div>
             <div id="successMessage" class="success-message"></div>
         </div>
 
+        <!-- Update these styles -->
+        <style>
+            .camera-container {
+                position: relative;
+                width: 640px;
+                margin: 0 auto;
+            }
+            .video-wrapper {
+                position: relative;
+                width: 100%;
+                height: 480px;
+            }
+            #video {
+                width: 100%;
+                height: 100%;
+                border-radius: 10px;
+                object-fit: cover;
+            }
+            #displayCanvas {
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 100%;
+                height: 100%;
+                border-radius: 10px;
+            }
+        </style>
+
         <div class="attendance-log">
             <h3>Today's Attendance Log</h3>
-            <div id="attendanceLog"></div>
+            <div id="attendanceLog" class="log-entries"></div>
         </div>
-    </div>
 
-    <script>
-        const video = document.getElementById('video');
-        const startButton = document.getElementById('startCamera');
-        const captureButton = document.getElementById('capture');
-        const resultDiv = document.getElementById('result');
-        const successMessage = document.getElementById('successMessage');
-        const attendanceLog = document.getElementById('attendanceLog');
-        let stream = null;
-
-        startButton.addEventListener('click', async () => {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'user',
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    } 
-                });
-                video.srcObject = stream;
-                startButton.style.display = 'none';
-                captureButton.style.display = 'inline-block';
-                resultDiv.textContent = 'Camera started. Ready to take attendance.';
-            } catch (err) {
-                console.error('Camera error:', err);
-                resultDiv.textContent = 'Error accessing camera: ' + err.message;
+        <!-- Add these styles -->
+        <style>
+            .log-entries {
+                max-height: 300px;
+                overflow-y: auto;
             }
-        });
+            .log-entry {
+                background-color: #3d3e4e;
+                margin: 8px 0;
+                padding: 12px;
+                border-radius: 6px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .log-entry span {
+                font-size: 16px;
+            }
+            .log-entry:first-child {
+                background-color: #4a4b5e;
+                border-left: 4px solid #ffd700;
+            }
+        </style>
 
-        captureButton.addEventListener('click', () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            
-            canvas.toBlob(blob => {
-                const formData = new FormData();
-                formData.append('image', blob, 'capture.jpg');
+        <script>
+            const video = document.getElementById('video');
+            const displayCanvas = document.getElementById('displayCanvas');
+            const startButton = document.getElementById('startCamera');
+            const resultDiv = document.getElementById('result');
+            const successMessage = document.getElementById('successMessage');
+            const attendanceLog = document.getElementById('attendanceLog');
+            let stream = null;
+            let isProcessing = false;
 
-                fetch('/mark_attendance/', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // Show success message
-                        successMessage.innerHTML = `${data.student} checked in successfully!`;
-                        successMessage.style.display = 'block';
+            // Wait for video to be ready
+            video.addEventListener('loadedmetadata', () => {
+                displayCanvas.width = video.videoWidth;
+                displayCanvas.height = video.videoHeight;
+            });
 
-                        // Add to attendance log
-                        const now = new Date();
-                        const timeString = now.toLocaleTimeString();
-                        const logEntry = document.createElement('div');
-                        logEntry.className = 'log-entry';
-                        logEntry.innerHTML = `
-                            <span>${data.student}</span>
-                            <span>${timeString}</span>
-                        `;
-                        attendanceLog.insertBefore(logEntry, attendanceLog.firstChild);
+            startButton.addEventListener('click', async () => {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: 'user',
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        } 
+                    });
+                    video.srcObject = stream;
+                    await video.play(); // Ensure video starts playing
+                    startButton.style.display = 'none';
+                    resultDiv.textContent = 'Camera started. Processing faces...';
+                    startRealTimeFaceRecognition();
+                } catch (err) {
+                    console.error('Camera error:', err);
+                    resultDiv.textContent = 'Error accessing camera: ' + err.message;
+                }
+            });
 
-                        // Hide success message after 3 seconds
-                        setTimeout(() => {
-                            successMessage.style.display = 'none';
-                        }, 3000);
-                    } else {
-                        resultDiv.innerHTML = `
-                            <div style="color: #e74c3c; padding: 10px;">
-                                ${data.message}
-                            </div>
-                        `;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    resultDiv.innerHTML = 'Error marking attendance. Please try again.';
-                });
-            }, 'image/jpeg', 0.95);
-        });
+        function startRealTimeFaceRecognition() {
+            setInterval(() => {
+                if (isProcessing) return;
+                isProcessing = true;
 
-        // Cleanup when leaving page
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0);
+                
+                canvas.toBlob(blob => {
+                    const formData = new FormData();
+                    formData.append('image', blob);
+                    
+                    fetch('/mark_attendance/', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.processed_image) {
+                            const img = new Image();
+                            img.onload = () => {
+                                const ctx = displayCanvas.getContext('2d');
+                                ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+                                ctx.drawImage(img, 0, 0, displayCanvas.width, displayCanvas.height);
+                            };
+                            img.src = 'data:image/jpeg;base64,' + data.processed_image;
+                        }
+                        
+                        if (data.status === 'success') {
+                            // Only add to log if it's a new attendance
+                            const now = new Date();
+                            const timeString = now.toLocaleTimeString();
+                            const logEntry = document.createElement('div');
+                            logEntry.className = 'log-entry';
+                            logEntry.style.opacity = '0';
+                            logEntry.style.transform = 'translateY(-20px)';
+                            logEntry.style.transition = 'all 0.3s ease-out';
+                            logEntry.innerHTML = `
+                                <span>${data.student}</span>
+                                <span>${timeString}</span>
+                            `;
+                            
+                            attendanceLog.insertBefore(logEntry, attendanceLog.firstChild);
+                            requestAnimationFrame(() => {
+                                logEntry.style.opacity = '1';
+                                logEntry.style.transform = 'translateY(0)';
+                            });
+
+                            // Show success message
+                            successMessage.innerHTML = `✓ Attendance marked for ${data.student}`;
+                            successMessage.style.display = 'block';
+                            setTimeout(() => {
+                                successMessage.style.display = 'none';
+                            }, 3000);
+                        } else if (data.status === 'info') {
+                            // Optional: Show info message for already marked attendance
+                            resultDiv.textContent = data.message;
+                            setTimeout(() => {
+                                resultDiv.textContent = 'Camera running. Processing faces...';
+                            }, 2000);
+                        }
+                        isProcessing = false;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        isProcessing = false;
+                    });
+                }, 'image/jpeg', 0.95);
+            }, 1000); // Check every second
+        }
+
         window.addEventListener('beforeunload', () => {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
